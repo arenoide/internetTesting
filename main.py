@@ -16,9 +16,9 @@ hosts_status = {}
 
 
 def check_ping(target):
-    return not random.randint(1, 100) <= 30
-    # return "Timed out" not in str(
-    #     ping(timeout=timeout / 1000, count=1, target=target, out_format=None, size=56, verbose=True)._responses[0])
+    # return not random.randint(1, 100) <= 30
+    return "Timed out" not in str(
+        ping(timeout=timeout / 1000, count=1, target=target, out_format=None, size=56, verbose=True)._responses[0])
 
 
 def append_to_csv(status, m, file_name):
