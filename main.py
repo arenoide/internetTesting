@@ -11,14 +11,14 @@ append_each = 60000  # In milliseconds
 delay = 500  # Delay between checks in milliseconds
 timeout = 400  # Request timeout in milliseconds
 
-hosts = [['wireless.csv', '192.168.0.1'], ['google.csv', '8.8.8.8'], ['ess01a-rd04-ae-17.csv', '84.116.190.117']]
+hosts = [['wireless.csv', '192.168.0.1'], ['google.csv', '8.8.8.8']]
 hosts_status = {}
 
 
 def check_ping(target):
-    # return not random.randint(1, 100) <= 30
-    return "Timed out" not in str(
-        ping(timeout=timeout / 1000, count=1, target=target, out=None, out_format=None, size=56)._responses[0])
+    return not random.randint(1, 100) <= 30
+    # return "Timed out" not in str(
+    #     ping(timeout=timeout / 1000, count=1, target=target, out_format=None, size=56, verbose=True)._responses[0])
 
 
 def append_to_csv(status, m, file_name):
@@ -47,19 +47,17 @@ def parallel_request(hs):
 
 
 if __name__ == '__main__':
-    next_time = datetime.now().replace(second=0, microsecond=0) + timedelta(minutes=1)
-    next_append = next_time + timedelta(milliseconds=append_each - delay)
+    next_time = datetime.now().replace(microsecond=0)
+    next_append = next_time.replace(second=0) + timedelta(milliseconds=append_each - delay)
 
-    internet_status = []
-    wireless_status = []
     while True:
         if datetime.now() >= next_time:
-            next_time = next_time + timedelta(milliseconds=delay)
 
+            next_time = next_time + timedelta(milliseconds=delay)
             parallel_request(hosts)
 
             if datetime.now() >= next_append:
-                time_of_log = next_append.replace(second=0, microsecond=0)
+                time_of_log = next_append.replace(second=0)
                 for entry in hosts_status:
                     append_to_csv(hosts_status[entry], time_of_log, entry)
                 hosts_status = {}
