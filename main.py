@@ -3,43 +3,60 @@ from datetime import datetime, timedelta
 import time
 import csv
 import random
+import concurrent.futures
 
 internet_ip = '8.8.8.8'
 wireless_ip = '192.168.0.1'
-append_each = 60000
-delay = 500
-timeout = 0.1
+append_each = 60000  # In milliseconds
+delay = 500  # Delay between checks in milliseconds
+timeout = 400  # Request timeout in milliseconds
 
-hosts = [['wireless.csv', '192.168.0.1', timeout], ['google.csv', '8.8.8.8', timeout]]
+hosts = [['wireless.csv', '192.168.0.1'], ['google.csv', '8.8.8.8'], ['ess01a-rd04-ae-17.csv', '84.116.190.117']]
+hosts_status = {}
 
 
-def check_ping(target, timeout):
+def check_ping(target):
     # return not random.randint(1, 100) <= 30
     return "Timed out" not in str(
-        ping(timeout=timeout, count=1, target=target, out=None, out_format=None, size=56)._responses[0])
+        ping(timeout=timeout / 1000, count=1, target=target, out=None, out_format=None, size=56)._responses[0])
 
 
 def append_to_csv(status, m, file_name):
     rate = sum(1 for value in status if not value) / len(status)
     with open(file_name, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([m, '%.4f' % rate, len(status)])
+        writer.writerow([m, '%.4f' % rate])
+
+
+def append_results(results):
+    i = 0
+    for host in hosts:
+        if host[0] not in hosts_status.keys():
+            hosts_status[host[0]] = []
+        hosts_status[host[0]].append(results[i])
+        i = i + 1
+
+
+def parallel_request(hs):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(check_ping, h[1]) for h in hs]
+
+        results = [f.result() for f in futures]
+
+        append_results(results)
 
 
 if __name__ == '__main__':
     next_time = datetime.now().replace(second=0, microsecond=0) + timedelta(minutes=1)
     next_append = next_time + timedelta(milliseconds=append_each - delay)
-    hosts_status = {}
+
     internet_status = []
     wireless_status = []
     while True:
         if datetime.now() >= next_time:
             next_time = next_time + timedelta(milliseconds=delay)
-            for host in hosts:
-                if host[0] not in hosts_status.keys():
-                    hosts_status[host[0]] = []
 
-                hosts_status[host[0]].append(check_ping(host[1], host[2]))
+            parallel_request(hosts)
 
             if datetime.now() >= next_append:
                 time_of_log = next_append.replace(second=0, microsecond=0)
