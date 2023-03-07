@@ -1,24 +1,26 @@
 from pythonping import ping
 from datetime import datetime, timedelta
+import subprocess
 import time
 import csv
 import random
+import sys
 import concurrent.futures
 
-internet_ip = '8.8.8.8'
-wireless_ip = '192.168.0.1'
 append_each = 60000  # In milliseconds
 delay = 500  # Delay between checks in milliseconds
-timeout = 400  # Request timeout in milliseconds
+timeout = 200  # Request timeout in milliseconds
 
-hosts = [['wireless.csv', '192.168.0.1'], ['google.csv', '8.8.8.8']]
-hosts_status = {}
+
+host = [sys.argv[1], sys.argv[2]]
+host_status = []
 
 
 def check_ping(target):
     # return not random.randint(1, 100) <= 30
+    # print(subprocess.check_output(['ping', '8.8.8.8', '-f', '-c', '10']))
     return "Timed out" not in str(
-        ping(timeout=timeout / 1000, count=1, target=target, out=None, out_format=None, size=56)._responses[0])
+        ping(timeout=timeout / 1000, count=1, target=target, out=None, out_format=None)._responses[0])
 
 
 def append_to_csv(status, m, file_name):
@@ -28,22 +30,9 @@ def append_to_csv(status, m, file_name):
         writer.writerow([m, '%.4f' % rate])
 
 
-def append_results(results):
-    i = 0
-    for host in hosts:
-        if host[0] not in hosts_status.keys():
-            hosts_status[host[0]] = []
-        hosts_status[host[0]].append(results[i])
-        i = i + 1
-
-
-def parallel_request(hs):
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(check_ping, h[1]) for h in hs]
-
-        results = [f.result() for f in futures]
-
-        append_results(results)
+def ping_request():
+    result = check_ping(host[0])
+    host_status.append(result)
 
 
 if __name__ == '__main__':
@@ -54,12 +43,11 @@ if __name__ == '__main__':
         if datetime.now() >= next_time:
 
             next_time = next_time + timedelta(milliseconds=delay)
-            parallel_request(hosts)
+            ping_request()
 
             if datetime.now() >= next_append:
                 time_of_log = next_append.replace(second=0)
-                for entry in hosts_status:
-                    append_to_csv(hosts_status[entry], time_of_log, entry)
-                hosts_status = {}
+                append_to_csv(host_status, time_of_log, host[1])
+                host_status = []
                 next_append = next_time + timedelta(milliseconds=append_each - delay)
         time.sleep(0.01)
