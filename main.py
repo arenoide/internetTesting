@@ -11,6 +11,14 @@ timeout = 300  # Request timeout in milliseconds
 host = [sys.argv[1], sys.argv[2]]
 
 
+def is_float(rate):
+    try:
+        float(rate)
+        return True
+    except:
+        return False
+
+
 def ping_rate(target):
     try:
         to = str(timeout / 1000).replace('.', ',')
@@ -19,7 +27,7 @@ def ping_rate(target):
         # a = subprocess.check_output(['sudo', 'bash', '-c', command])
         a = subprocess.check_output(['ping', target, '-w', str(append_each), '-W', to, '-i', d, '-q', '-s', '68'])
         rate = (re.search(r'(\d+(?:[.,]\d+)?)(?=% packet loss,)', str(a))).group(1).replace(",", ".")
-        if not rate.isnumeric() or int(rate) > 1:
+        if not is_float(rate) or float(rate) > 1:
             print(a)
         return rate
     except:
